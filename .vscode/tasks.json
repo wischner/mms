@@ -1,0 +1,45 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "CMake: configure",
+        "type": "shell",
+        "command": "cmake",
+        "args": [
+          "-G", "Unix Makefiles",
+          "-S", "${workspaceFolder}",
+          "-B", "${workspaceFolder}/build"
+        ],
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "CMake: build",
+        "type": "shell",
+        "command": "cmake",
+        "args": [
+          "--build", "${workspaceFolder}/build",
+          "--config", "Debug"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "dependsOn": "CMake: configure",
+        "problemMatcher": []
+      },
+      {
+        "label": "CMake: build tests",
+        "type": "shell",
+        "command": "cmake",
+        "args": [
+          "--build", "${workspaceFolder}/build",
+          "--target", "test-mms",
+          "--config", "Debug"
+        ],
+        "dependsOn": "CMake: build",
+        "problemMatcher": []
+      }
+    ]
+  }
+  
