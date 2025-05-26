@@ -5,7 +5,7 @@ namespace mms
 {
 
     postrack::postrack()
-        : line_(1), column_(0), current_pos_(0) {}
+        : line_(1), column_(1), current_pos_(0) {}
 
     void postrack::update_position(int ch)
     {
@@ -13,7 +13,7 @@ namespace mms
         {
             newline_positions_.insert(current_pos_);
             ++line_;
-            column_ = 0;
+            column_ = 1;
         }
         else
         {
@@ -24,22 +24,26 @@ namespace mms
 
     void postrack::adjust_position_on_putback(char c)
     {
+        --current_pos_;
+
         if (c == '\n')
         {
             --line_;
-            column_ = current_pos_ - *newline_positions_.lower_bound(current_pos_);
+            auto it = newline_positions_.lower_bound(current_pos_);
+            if (it == newline_positions_.begin())
+            {
+                column_ = current_pos_ + 1;
+            }
+            else
+            {
+                --it;
+                column_ = current_pos_ - *it;
+            }
         }
         else
         {
             --column_;
         }
-        --current_pos_;
-    }
-
-    void postrack::add_bookmark(std::size_t pos)
-    {
-        // Store the current line and column along with the position in bookmarks
-        bookmarks_[pos] = {line_, column_};
     }
 
     void postrack::set_position(std::size_t pos)
@@ -47,22 +51,23 @@ namespace mms
         current_pos_ = pos;
 
         // Check if the position is bookmarked
-        if (bookmarks_.count(pos))
+        auto it = bookmarks_.find(pos);
+        if (it != bookmarks_.end())
         {
-            line_ = bookmarks_[pos].first;
-            column_ = bookmarks_[pos].second;
+            line_ = it->second.first;
+            column_ = it->second.second;
         }
         else
         {
             // Recalculate line and column for non-bookmarked positions
             line_ = 1;
-            column_ = 0;
+            column_ = 1;
             for (auto newline_pos : newline_positions_)
             {
                 if (newline_pos < pos)
                 {
                     ++line_;
-                    column_ = pos - newline_pos - 1; // Calculate the column correctly
+                    column_ = pos - newline_pos; // Calculate the column correctly
                 }
                 else
                 {
@@ -70,6 +75,20 @@ namespace mms
                 }
             }
         }
+    }
+
+    bookmark postrack::add_bookmark()
+    {
+        bookmark b(current_pos_, line_, column_);
+        bookmarks_[current_pos_] = {line_, column_};
+        return b;
+    }
+
+    void postrack::set_position(const bookmark &b)
+    {
+        current_pos_ = b.position();
+        line_ = b.line();
+        column_ = b.column();
     }
 
     int postrack::line() const

@@ -74,11 +74,14 @@ namespace mms
         /** @brief Update tracker for a consumed character. */
         void update_position(int ch);
         /** @brief Adjust tracker when a character is put back. */
-        void adjust_position_on_putback(char c);
-        /** @brief Add a bookmark at the current position. */
-        void add_bookmark(std::size_t pos);
+        void adjust_position_on_putback(char ch);
         /** @brief Set tracker to an arbitrary position (uses bookmarks or recalculation). */
         void set_position(std::size_t pos);
+
+        /** @brief Add a bookmark at the current position. */
+        bookmark add_bookmark();
+        /** @brief Set position to bookmark. */
+        void set_position(const bookmark &b);
 
         /** @return Current line number */
         int line() const;
@@ -172,6 +175,12 @@ namespace mms
          * @return The put-back character or EOF on failure
          */
         int_type pbackfail(int_type ch = traits_type::eof()) override;
+
+        std::streamsize xsgetn(char_type *s, std::streamsize n) override;
+        pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+                         std::ios_base::openmode which) override;
+        pos_type seekpos(pos_type sp,
+                         std::ios_base::openmode which) override;
 
     private:
         file file_;        ///< Underlying memory-mapped file

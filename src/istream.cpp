@@ -5,7 +5,7 @@ namespace mms
 {
 
     istream::istream(const char *filename, bool utf8_mode)
-        : std::istream(&buffer_), buffer_(filename, utf8_mode) {}
+        : buffer_(filename, utf8_mode), std::istream(&buffer_) {}
 
     int istream::line() const
     {

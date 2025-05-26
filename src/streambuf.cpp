@@ -71,4 +71,46 @@ namespace mms
         return traits_type::eof();
     }
 
+    std::streamsize streambuf::xsgetn(char_type *s, std::streamsize n)
+    {
+        std::streamsize count = 0;
+        while (count < n && gptr() < egptr())
+        {
+            char c = *gptr();
+            tracker_.update_position(static_cast<unsigned char>(c));
+            *s++ = c;
+            gbump(1);
+            ++count;
+        }
+        return count;
+    }
+
+    streambuf::pos_type streambuf::seekoff(off_type off,
+                                           std::ios_base::seekdir dir,
+                                           std::ios_base::openmode which)
+    {
+        if (dir != std::ios_base::beg || which != std::ios_base::in)
+            return pos_type(off_type(-1));
+
+        const char *base = file_.data();
+        const char *end = base + file_.size();
+        const char *target = base + off;
+
+        if (target < base || target > end)
+            return pos_type(off_type(-1));
+
+        setg(const_cast<char *>(base),
+             const_cast<char *>(target),
+             const_cast<char *>(end));
+
+        tracker_.set_position(off);
+        return pos_type(off);
+    }
+
+    streambuf::pos_type streambuf::seekpos(pos_type sp,
+                                           std::ios_base::openmode which)
+    {
+        return seekoff(sp, std::ios_base::beg, which);
+    }
+
 } // namespace mms
