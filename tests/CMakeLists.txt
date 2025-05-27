@@ -14,9 +14,12 @@ enable_testing()
 
 # Build the test executable (links against the mms library)
 add_executable(test-mms
+    main.cpp
     test-bookmark.cpp
     test-postrack.cpp
     test-file.cpp
+    test-streambuf.cpp
+    test-istream.cpp
 )
 target_include_directories(test-mms
     PRIVATE

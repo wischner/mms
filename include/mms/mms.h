@@ -176,16 +176,51 @@ namespace mms
          */
         int_type pbackfail(int_type ch = traits_type::eof()) override;
 
+        /**
+         * @brief Reads a block of characters from the stream buffer.
+         *
+         * Extracts up to @p n characters into the buffer @p s, advancing the get pointer and updating
+         * the position tracker with each consumed character. This is used for high-throughput reads
+         * such as `istream::read()` or `std::copy()`.
+         *
+         * @param s Pointer to the destination character buffer.
+         * @param n Maximum number of characters to read.
+         * @return The number of characters actually read.
+         */
         std::streamsize xsgetn(char_type *s, std::streamsize n) override;
+
+        /**
+         * @brief Seeks to a relative offset within the stream buffer.
+         *
+         * Supports seeking from the beginning of the file (`std::ios_base::beg`) in input mode only.
+         * Invalid seeks (e.g. relative or output-mode) return an error. Updates the internal
+         * position tracker after a successful seek.
+         *
+         * @param off  Offset to seek to.
+         * @param dir  Direction to seek from (only `beg` is supported).
+         * @param which Mode flags (must include `in`).
+         * @return New position if successful, or -1 on failure.
+         */
         pos_type seekoff(off_type off, std::ios_base::seekdir dir,
                          std::ios_base::openmode which) override;
+
+        /**
+         * @brief Seeks to an absolute position in the stream.
+         *
+         * Shortcut for `seekoff(sp, std::ios_base::beg, which)`.
+         *
+         * @param sp Absolute position to seek to.
+         * @param which Mode flags (must include `in`).
+         * @return New position if successful, or -1 on failure.
+         */
         pos_type seekpos(pos_type sp,
                          std::ios_base::openmode which) override;
 
     private:
-        file file_;        ///< Underlying memory-mapped file
-        postrack tracker_; ///< Line and column tracker
-        bool utf8_mode_;   ///< Reserved for future UTF-8 support
+        file file_;          ///< Underlying memory-mapped file
+        postrack tracker_;   ///< Line and column tracker
+        bool utf8_mode_;     ///< Reserved for future UTF-8 support
+        std::size_t offset_; ///< Track read position
     };
 
     /**

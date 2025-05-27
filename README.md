@@ -2,13 +2,16 @@
 
 # mms
 
-**mms** (Memory‑Mapped Streams) is a lightweight, header‑only C++17 library providing drop‑in replacements for `std::istream`/`std::ostream`, backed by POSIX memory‑mapping and featuring precise, real‑time line/column position tracking. Designed from the ground up for toolchains—compilers, assemblers, and linkers—**mms** delivers both throughput and accuracy in modern C++ codebases.
+**mms** (Memory‑Mapped Streams) is a lightweight, C++20 library providing drop‑in replacements for `std::istream`/`std::ostream`, backed by POSIX memory‑mapping and featuring precise, real‑time line/column position tracking. Designed from the ground up for toolchains—compilers, assemblers, and linkers—**mms** delivers both throughput and accuracy in modern C++ codebases.
+
+Internals from:
+https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/std/streambuf
 
 ---
 
 ## Key Features
 
-- **Blazing Performance**  
+- **Performance**  
   Leverage `mmap` for zero‑copy file access and ultra‑fast reads—perfect when parsing megabyte‑scale source files.
 
 - **Accurate Source Locations**  

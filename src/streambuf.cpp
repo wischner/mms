@@ -5,19 +5,13 @@ namespace mms
 {
 
     streambuf::streambuf(const char *filename, bool utf8_mode)
-        : file_(filename), tracker_(), utf8_mode_(utf8_mode)
+        : file_(filename), tracker_(), utf8_mode_(utf8_mode), offset_(0)
     {
-        if (file_.is_open())
-        {
-            // Initialize get area to the entire mapped file
-            setg(const_cast<char *>(file_.data()),
-                 const_cast<char *>(file_.data()),
-                 const_cast<char *>(file_.data()) + file_.size());
-        }
-        else
-        {
+        if (!file_.is_open())
             throw std::ios_base::failure("Failed to open or map file");
-        }
+
+        // Start with empty get area to force STL to call underflow()
+        setg(nullptr, nullptr, nullptr);
     }
 
     streambuf::~streambuf() = default;
@@ -27,61 +21,77 @@ namespace mms
         return tracker_;
     }
 
-    std::streambuf::int_type streambuf::underflow()
+    streambuf::int_type streambuf::underflow()
     {
-        if (gptr() == egptr())
-        {
+        if (offset_ >= file_.size())
             return traits_type::eof();
-        }
-        // Peek without consuming
-        return traits_type::to_int_type(*gptr());
+
+        const char *base = file_.data();
+        char *p = const_cast<char *>(&base[offset_]);
+
+        setg(p, p, p + 1); // Prepare 1-char buffer
+
+        return traits_type::to_int_type(*p);
     }
 
-    std::streambuf::int_type streambuf::uflow()
+    streambuf::int_type streambuf::uflow()
     {
-        // Extract next character
-        auto c = underflow();
-        if (traits_type::eq_int_type(c, traits_type::eof()))
-        {
-            return c;
-        }
-        // Consume and track
-        char_type ch = traits_type::to_char_type(c);
-        gbump(1);
-        tracker_.update_position(static_cast<unsigned char>(ch));
-        return c;
+        int_type ch = underflow();
+        if (traits_type::eq_int_type(ch, traits_type::eof()))
+            return ch;
+
+        tracker_.update_position(static_cast<unsigned char>(*gptr()));
+        ++offset_;
+        gbump(1); // move gptr() forward
+        return ch;
     }
 
     std::streambuf::int_type streambuf::pbackfail(int_type ch)
     {
-        if (gptr() > eback())
+        // Check if we can un-read one character
+        if (offset_ == 0)
+            return traits_type::eof(); // can't put back before beginning
+
+        --offset_; // move back one byte in file
+
+        const char *base = file_.data();
+        char c = base[offset_];
+
+        // If a specific char was requested, verify match
+        if (ch != traits_type::eof() &&
+            c != traits_type::to_char_type(ch))
         {
-            // Move get pointer back
-            gbump(-1);
-            unsigned char uc = static_cast<unsigned char>(*gptr());
-            // If caller specified a char, verify it matches
-            if (ch != traits_type::eof() && uc != static_cast<unsigned char>(ch))
-            {
-                return traits_type::eof();
-            }
-            // Adjust tracker
-            tracker_.adjust_position_on_putback(static_cast<char>(uc));
-            return traits_type::to_int_type(uc);
+            ++offset_; // undo
+            return traits_type::eof();
         }
-        return traits_type::eof();
+
+        // Adjust tracking
+        tracker_.adjust_position_on_putback(c);
+
+        // Re-create 1-char buffer at this position
+        char *p = const_cast<char *>(&base[offset_]);
+        setg(p, p, p + 1);
+
+        return traits_type::to_int_type(c);
     }
 
     std::streamsize streambuf::xsgetn(char_type *s, std::streamsize n)
     {
         std::streamsize count = 0;
-        while (count < n && gptr() < egptr())
+
+        while (count < n)
         {
-            char c = *gptr();
-            tracker_.update_position(static_cast<unsigned char>(c));
-            *s++ = c;
+            int_type ch = underflow();
+            if (traits_type::eq_int_type(ch, traits_type::eof()))
+                break;
+
+            *s++ = traits_type::to_char_type(ch);
+            tracker_.update_position(static_cast<unsigned char>(*gptr()));
+            ++offset_;
             gbump(1);
             ++count;
         }
+
         return count;
     }
 
@@ -89,28 +99,34 @@ namespace mms
                                            std::ios_base::seekdir dir,
                                            std::ios_base::openmode which)
     {
-        if (dir != std::ios_base::beg || which != std::ios_base::in)
+        if (which != std::ios_base::in)
             return pos_type(off_type(-1));
 
-        const char *base = file_.data();
-        const char *end = base + file_.size();
-        const char *target = base + off;
+        std::size_t new_pos;
 
-        if (target < base || target > end)
+        if (dir == std::ios_base::beg)
+            new_pos = off;
+        else if (dir == std::ios_base::cur)
+            new_pos = offset_;
+        else
+            return pos_type(off_type(-1)); // only beg and cur supported
+
+        if (new_pos > file_.size())
             return pos_type(off_type(-1));
 
-        setg(const_cast<char *>(base),
-             const_cast<char *>(target),
-             const_cast<char *>(end));
+        offset_ = new_pos;
 
-        tracker_.set_position(off);
-        return pos_type(off);
+        // Clear buffer so STL forces underflow again
+        setg(nullptr, nullptr, nullptr);
+        tracker_.set_position(offset_);
+
+        return pos_type(offset_);
     }
 
     streambuf::pos_type streambuf::seekpos(pos_type sp,
                                            std::ios_base::openmode which)
     {
-        return seekoff(sp, std::ios_base::beg, which);
+        return seekoff(off_type(sp), std::ios_base::beg, which);
     }
 
 } // namespace mms

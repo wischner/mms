@@ -9,7 +9,7 @@
 namespace fs = std::filesystem;
 using mms::file;
 
-static fs::path exeDir;
+extern fs::path exeDir;
 
 // Helper: construct path to test file in bin/data/
 static fs::path data_file(const std::string &name)
@@ -63,12 +63,4 @@ TEST(MappedFile, UTF8FileIsCorrectlyMapped)
 TEST(MappedFile, InvalidPathThrowsException)
 {
     EXPECT_THROW(file("data/this-file-does-not-exist.txt"), std::ios_base::failure);
-}
-
-// Setup to capture executable directory for data path construction
-int main(int argc, char **argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    exeDir = fs::weakly_canonical(fs::path(argv[0])).parent_path();
-    return RUN_ALL_TESTS();
 }
