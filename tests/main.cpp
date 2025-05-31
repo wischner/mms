@@ -1,9 +1,9 @@
 #include <filesystem>
 #include <string>
 
-#include <mms/mms.h>
-
 #include <gtest/gtest.h>
+
+#include <mms/mms.h>
 
 namespace fs = std::filesystem;
 

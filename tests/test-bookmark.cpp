@@ -1,6 +1,6 @@
-#include <mms/mms.h>
-
 #include <gtest/gtest.h>
+
+#include <mms/mms.h>
 
 using mms::bookmark;
 

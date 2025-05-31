@@ -1,4 +1,13 @@
-// postrack.cpp
+/// \file
+/// \brief Implementation of the `mms::postrack` class for line/column tracking.
+///
+/// This file defines the `postrack` class, which manages the tracking of byte position,
+/// line, and column numbers in a character stream. It supports putback correction,
+/// bookmarking for fast seeks, and newline indexing.
+///
+/// Copyright (c) 2024–2025 Tomaz Stih
+/// SPDX-License-Identifier: MIT
+
 #include <mms/mms.h>
 
 namespace mms

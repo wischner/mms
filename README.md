@@ -126,6 +126,10 @@ If you're interested in exploring the internal logic of the standard C++ stream 
 
 This project is licensed under the [MIT License](LICENSE).
 
+## Copyright
+
+© 2025 Tomaz Stih. All rights reserved.
+
 [language.url]: https://isocpp.org/
 [language.badge]: https://img.shields.io/badge/language-C++-blue.svg
 [standard.url]: https://en.wikipedia.org/wiki/C%2B%2B#Standardization

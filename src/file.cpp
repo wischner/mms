@@ -1,11 +1,20 @@
-// file.cpp
-#include <mms/mms.h>
+/// \file
+/// \brief Implementation of the `mms::file` class, a memory-mapped file reader.
+///
+/// This file provides the definition of the `file` class, which maps files into memory
+/// using POSIX APIs (`open`, `mmap`, `munmap`, etc.) for high-performance sequential reading.
+/// It is designed for use in source-processing tools like compilers and assemblers.
+///
+/// Copyright (c) 2024–2025 Tomaz Stih
+/// SPDX-License-Identifier: MIT
 
 #include <fcntl.h>    // open
 #include <unistd.h>   // close, lseek
 #include <sys/mman.h> // mmap, munmap, madvise
 #include <cstring>    // strerror
 #include <stdexcept>  // std::ios_base::failure
+
+#include <mms/mms.h>
 
 namespace mms
 {

@@ -1,8 +1,18 @@
-#include <mms/mms.h>
+/// \file
+/// \brief Implementation of the `mms::source` class and stream extraction operators.
+///
+/// The `source` class provides stream-like reading of memory-mapped files,
+/// including character reading, peeking, putback, bookmarking, and position tracking.
+/// It also implements operator>> for reading words, integers, and characters.
+///
+/// Copyright (c) 2024–2025 Tomaz Stih
+/// SPDX-License-Identifier: MIT
 
 #include <cctype>
 #include <stdexcept>
 #include <string>
+
+#include <mms/mms.h>
 
 namespace mms
 {
