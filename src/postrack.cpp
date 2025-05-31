@@ -106,4 +106,9 @@ namespace mms
         return newline_positions_;
     }
 
+    std::size_t postrack::position() const
+    {
+        return current_pos_;
+    }
+
 } // namespace mms

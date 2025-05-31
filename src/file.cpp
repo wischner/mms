@@ -1,5 +1,11 @@
-// mmap_file.cpp
+// file.cpp
 #include <mms/mms.h>
+
+#include <fcntl.h>    // open
+#include <unistd.h>   // close, lseek
+#include <sys/mman.h> // mmap, munmap, madvise
+#include <cstring>    // strerror
+#include <stdexcept>  // std::ios_base::failure
 
 namespace mms
 {
@@ -16,14 +22,31 @@ namespace mms
 
         // Get the file size
         file_size_ = lseek(file_descriptor_, 0, SEEK_END);
-        lseek(file_descriptor_, 0, SEEK_SET); // Reset file position
-
-        // Memory-map the file
-        mapped_data_ = static_cast<const char *>(mmap(nullptr, file_size_, PROT_READ, MAP_PRIVATE, file_descriptor_, 0));
-        if (mapped_data_ == MAP_FAILED)
+        if (file_size_ == static_cast<std::size_t>(-1))
         {
             close(file_descriptor_);
-            throw std::ios_base::failure("Error mapping file: " + std::string(strerror(errno)));
+            throw std::ios_base::failure("Error determining file size: " + std::string(strerror(errno)));
+        }
+
+        // Memory-map the file if not empty
+        if (file_size_ > 0)
+        {
+            mapped_data_ = static_cast<const char *>(
+                mmap(nullptr, file_size_, PROT_READ, MAP_PRIVATE, file_descriptor_, 0));
+            if (mapped_data_ == MAP_FAILED)
+            {
+                close(file_descriptor_);
+                throw std::ios_base::failure("Error mapping file: " + std::string(strerror(errno)));
+            }
+
+            // Advise sequential access if supported
+#ifdef POSIX_MADV_SEQUENTIAL
+            posix_madvise(const_cast<char *>(mapped_data_), file_size_, POSIX_MADV_SEQUENTIAL);
+#endif
+        }
+        else
+        {
+            mapped_data_ = nullptr; // Nothing to map
         }
     }
 
@@ -31,11 +54,11 @@ namespace mms
     {
         if (mapped_data_ && mapped_data_ != MAP_FAILED)
         {
-            munmap(const_cast<char *>(mapped_data_), file_size_); // Unmap memory
+            munmap(const_cast<char *>(mapped_data_), file_size_);
         }
         if (file_descriptor_ != -1)
         {
-            close(file_descriptor_); // Close file
+            close(file_descriptor_);
         }
     }
 
@@ -51,7 +74,7 @@ namespace mms
 
     bool file::is_open() const
     {
-        return mapped_data_ != nullptr;
+        return file_descriptor_ != -1;
     }
 
-} // Namespace mms
+} // namespace mms

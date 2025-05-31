@@ -1,11 +1,12 @@
 /*
  * mms.h
  *
- * Memory‑Mapped Streams (mms) — high‑performance C++ memory‑mapped iostreams
+ * Memory‑Mapped Source (mms) — high‑performance C++ memory‑mapped
  * with built‑in line and column tracking.
  *
  * NOTES:
- *   Designed for modern C++ toolchains: compilers, assemblers, and linkers.
+ *   Designed for modern C++ toolchains: compilers, assemblers, and
+ *   linkers.
  *
  * SPDX‑License‑Identifier: MIT
  * Copyright (c) 2025 Wischner Ltd.
@@ -28,6 +29,8 @@
 #include <codecvt>
 #include <locale>
 #include <iostream>
+#include <cstddef>
+#include <optional>
 
 namespace mms
 {
@@ -89,6 +92,8 @@ namespace mms
         int column() const;
         /** @return Set of newline byte positions encountered */
         const std::set<std::size_t> &newline_positions() const;
+        /** @return Current position. */
+        std::size_t position() const;
 
     private:
         int line_;
@@ -125,126 +130,66 @@ namespace mms
     };
 
     /**
-     * @brief A std::streambuf over a memory-mapped file with line/column tracking.
+     * @brief Provides a lightweight, stream-like interface for reading source files.
      *
-     * Leverages POSIX mmap for zero-copy file access, updating line/column on
-     * each character extraction and supporting putback operations.
+     * The source class reads characters from a memory-mapped file while tracking
+     * the current position, line, and column. It supports peeking, putback,
+     * and bookmarking, making it suitable for use in lexical analyzers and compilers.
      *
-     * @param filename Path to the file to open and map
-     * @param utf8_mode If true, enables UTF-8 decoding (future support)
+     * This class does not inherit from std::istream to retain full control over
+     * behavior and efficiency.
      */
-    class streambuf : public std::streambuf
+    class source
     {
     public:
-        /**
-         * @brief Construct a memory-mapped stream buffer.
-         * @param filename  Path to the file to open and map
-         * @param utf8_mode If true, enables UTF-8 decoding
-         */
-        explicit streambuf(const char *filename, bool utf8_mode = false);
+        /** @brief Open and prepare the source from a memory-mapped file. */
+        explicit source(const char *filename);
 
-        /**
-         * @brief Destructor unmaps and closes the file.
-         */
-        ~streambuf();
+        /** @brief Read next character and advance position. Returns EOF on end. */
+        int get();
 
-        /**
-         * @brief Access the internal position tracker.
-         * @return Reference to the postrack containing current line/column
-         */
-        const postrack &tracker() const;
+        /** @brief Peek next character without advancing. Returns EOF on end. */
+        int peek() const;
 
-    protected:
-        /**
-         * @brief Called to peek the next character without consuming it.
-         * @return Next character or EOF if at end of file
-         */
-        int_type underflow() override;
+        /** @brief Put back the last character (1 level only). */
+        void putback();
 
-        /**
-         * @brief Called to extract the next character and advance the stream.
-         * Updates the line and column tracker.
-         * @return Extracted character or EOF if at end of file
-         */
-        int_type uflow() override;
+        /** @brief Check if the source is still valid (i.e., not EOF). */
+        explicit operator bool() const;
 
-        /**
-         * @brief Called to put back one character into the get area.
-         * Adjusts the tracker to reflect the position before extraction.
-         * @param ch Character to put back (or EOF)
-         * @return The put-back character or EOF on failure
-         */
-        int_type pbackfail(int_type ch = traits_type::eof()) override;
+        /** @brief Get current byte position in the file. */
+        std::size_t position() const;
 
-        /**
-         * @brief Reads a block of characters from the stream buffer.
-         *
-         * Extracts up to @p n characters into the buffer @p s, advancing the get pointer and updating
-         * the position tracker with each consumed character. This is used for high-throughput reads
-         * such as `istream::read()` or `std::copy()`.
-         *
-         * @param s Pointer to the destination character buffer.
-         * @param n Maximum number of characters to read.
-         * @return The number of characters actually read.
-         */
-        std::streamsize xsgetn(char_type *s, std::streamsize n) override;
-
-        /**
-         * @brief Seeks to a relative offset within the stream buffer.
-         *
-         * Supports seeking from the beginning of the file (`std::ios_base::beg`) in input mode only.
-         * Invalid seeks (e.g. relative or output-mode) return an error. Updates the internal
-         * position tracker after a successful seek.
-         *
-         * @param off  Offset to seek to.
-         * @param dir  Direction to seek from (only `beg` is supported).
-         * @param which Mode flags (must include `in`).
-         * @return New position if successful, or -1 on failure.
-         */
-        pos_type seekoff(off_type off, std::ios_base::seekdir dir,
-                         std::ios_base::openmode which) override;
-
-        /**
-         * @brief Seeks to an absolute position in the stream.
-         *
-         * Shortcut for `seekoff(sp, std::ios_base::beg, which)`.
-         *
-         * @param sp Absolute position to seek to.
-         * @param which Mode flags (must include `in`).
-         * @return New position if successful, or -1 on failure.
-         */
-        pos_type seekpos(pos_type sp,
-                         std::ios_base::openmode which) override;
-
-    private:
-        file file_;          ///< Underlying memory-mapped file
-        postrack tracker_;   ///< Line and column tracker
-        bool utf8_mode_;     ///< Reserved for future UTF-8 support
-        std::size_t offset_; ///< Track read position
-    };
-
-    /**
-     * @brief Input stream that reads from a streambuf and exposes position info.
-     *
-     * Drop-in replacement for std::istream with memory-mapped performance
-     * and real-time line/column reporting via line() and column().
-     */
-    class istream : public std::istream
-    {
-    public:
-        /**
-         * @param filename  Path to file
-         * @param utf8_mode Enable UTF-8 decoding
-         */
-        explicit istream(const char *filename, bool utf8_mode = false);
-
-        /** @return Current line number in the stream */
+        /** @brief Get current line number (1-based). */
         int line() const;
-        /** @return Current column number in the stream */
+
+        /** @brief Get current column number (1-based). */
         int column() const;
 
+        /** @brief Create a bookmark for the current location. */
+        bookmark mark() const;
+
+        /** @brief Seek back to a previously stored bookmark. */
+        void seek(const bookmark &b);
+
+        /** @brief Return raw pointer to mapped file data. */
+        const char *data() const;
+
+        /** @brief Return total file size in bytes. */
+        std::size_t size() const;
+
     private:
-        streambuf buffer_;
+        file file_;
+        postrack tracker_;
     };
+
+    /** @brief Extract the next word (non-whitespace token) from the stream. */
+    source &operator>>(source &s, std::string &out);
+
+    /** @brief Extract an integer from the stream. */
+    source &operator>>(source &s, int &value);
+
+    /** @brief Extract a single character from the stream. */
+    source &operator>>(source &s, char &ch);
 
 } // namespace mms

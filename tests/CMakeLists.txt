@@ -18,9 +18,9 @@ add_executable(test-mms
     test-bookmark.cpp
     test-postrack.cpp
     test-file.cpp
-    test-streambuf.cpp
-    test-istream.cpp
+    test-source.cpp
 )
+
 target_include_directories(test-mms
     PRIVATE
       ${CMAKE_SOURCE_DIR}/include   # public headers for mms

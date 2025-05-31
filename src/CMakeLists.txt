@@ -4,8 +4,7 @@ set(MMS_SOURCES
     bookmark.cpp
     postrack.cpp
     file.cpp
-    streambuf.cpp
-    istream.cpp
+    source.cpp
 )
 
 # Create the library target
