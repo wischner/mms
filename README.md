@@ -134,4 +134,4 @@ This project is licensed under the [MIT License](LICENSE).
 [language.badge]: https://img.shields.io/badge/language-C++-blue.svg
 [standard.url]: https://en.wikipedia.org/wiki/C%2B%2B#Standardization
 [standard.badge]: https://img.shields.io/badge/C%2B%2B-20-blue.svg
-[status.badge]: https://img.shields.io/badge/status-beta-orange.svg
+[status.badge]: https://img.shields.io/badge/status-prerelease-green.svg
